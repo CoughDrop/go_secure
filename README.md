@@ -1,0 +1,1 @@
+Security helper gem, used by multiple CoughDrop libraries
