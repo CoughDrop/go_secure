@@ -115,10 +115,18 @@ module GoSecure
   end
   
   module SecureJson
+    def self.db_encryption(bool)
+      @db_encryption = !!bool
+    end
+    
     def self.load(str)
       return nil unless str
-      salt, secret = str.split(/--/, 2)
-      JSON.load(GoSecure.decrypt(secret, salt, "secure_json"))
+      if str.match(/^\*\*/)
+        JSON.load(str[2..-1])
+      else
+        salt, secret = str.split(/--/, 2)
+        JSON.load(GoSecure.decrypt(secret, salt, "secure_json"))
+      end
     end
   
     def self.dump(obj)
@@ -128,8 +136,12 @@ module GoSecure
     end
   
     def self.encrypted_dump(json)
-      secret, salt = GoSecure.encrypt(json, "secure_json")
-      salt + "--" + secret
+      if @db_encryption == false
+        "**" + json
+      else
+        secret, salt = GoSecure.encrypt(json, "secure_json")
+        salt + "--" + secret
+      end
     end
   end
 end
