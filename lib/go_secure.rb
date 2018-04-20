@@ -1,8 +1,16 @@
 require 'openssl'
+require 'base64'
 
 module GoSecure
   def self.sha512(str, salt, encryption_key=nil)
     Digest::SHA512.hexdigest(str.to_s + salt.to_s + (encryption_key || self.encryption_key))
+  end
+  
+  def self.hmac(str, salt, level, encryption_key=nil)
+    # level is here so we can upgrade in the future without breaking backwards compatibility
+    raise "invalid level" unless level == 1
+    digest = OpenSSL::Digest::SHA512.new(encryption_key || self.encryption_key)
+    res = Base64.urlsafe_encode64(OpenSSL::PKCS5.pbkdf2_hmac(str.to_s, salt.to_s, 100000, digest.digest_length, digest))
   end
   
   def self.nonce(str)
@@ -37,18 +45,18 @@ module GoSecure
     pw = {}
 #     pw['hash_type'] = 'sha512'
 #     pw['hash_type'] = 'bcrypt'
-    pw['hash_type'] = 'pbkdf2-sha256'
+    pw['hash_type'] = 'pbkdf2-sha256-2'
     pw['salt'] = Digest::MD5.hexdigest(OpenSSL::Random.pseudo_bytes(4) + Time.now.to_i.to_s + self.encryption_key + "pw" + OpenSSL::Random.pseudo_bytes(16))
 #     pw['hashed_password'] = Digest::SHA512.hexdigest(self.encryption_key + pw['salt'] + password.to_s)
 #     salted = Digest::SHA256.hexdigest(self.encryption_key + pw['salt'] + password.to_s)
 #     pw['hashed_password'] = BCrypt::Password.create(salted)
-    digest = OpenSSL::Digest::SHA256.new
-    pw['hashed_password'] = Base64.encode64(OpenSSL::PKCS5.pbkdf2_hmac(password.to_s, pw['salt'], 100000, digest.digest_length, digest))
+    digest = OpenSSL::Digest::SHA512.new(self.encryption_key)
+    pw['hashed_password'] = Base64.urlsafe_encode64(OpenSSL::PKCS5.pbkdf2_hmac(password.to_s, pw['salt'], 100000, digest.digest_length, digest))
     pw
   end
   
   def self.outdated_password?(password_hash)
-    return password_hash && password_hash['hash_type'] != 'pbkdf2-sha256'
+    return password_hash && password_hash['hash_type'] != 'pbkdf2-sha256-2'
   end
   
   def self.matches_password?(attempt, password_hash)
@@ -67,6 +75,10 @@ module GoSecure
     elsif password_hash && password_hash['hash_type'] == 'pbkdf2-sha256' && password_hash['salt']
       digest = OpenSSL::Digest::SHA256.new
       str = Base64.encode64(OpenSSL::PKCS5.pbkdf2_hmac(attempt.to_s, password_hash['salt'], 100000, digest.digest_length, digest))
+      res = str == password_hash['hashed_password']
+    elsif password_hash && password_hash['hash_type'] == 'pbkdf2-sha256-2' && password_hash['salt']
+      digest = OpenSSL::Digest::SHA512.new(self.encryption_key)
+      str = Base64.urlsafe_encode64(OpenSSL::PKCS5.pbkdf2_hmac(attempt.to_s, password_hash['salt'], 100000, digest.digest_length, digest))
       res = str == password_hash['hashed_password']
     else
       false

@@ -9,6 +9,7 @@ describe GoSecure do
       GoSecure::SecureJson.remove_instance_variable('@db_encryption')
     end
   end
+  
   describe "sha512" do
     it "should not error on nil values" do
       expect(GoSecure.sha512(nil, nil)).to eq(Digest::SHA512.hexdigest("" + GoSecure.encryption_key))
@@ -23,6 +24,32 @@ describe GoSecure do
     it "should allow using a custom encryption key" do
       expect(GoSecure.sha512('a', 'b', 'cde')).to eq(Digest::SHA512.hexdigest("abcde"))
     end
+  end
+
+  describe "hmac" do
+    it "should not error on nil values" do
+      digest = OpenSSL::Digest::SHA512.new(GoSecure.encryption_key)
+      expect(GoSecure.hmac(nil, nil, 1)).to eq(Base64.urlsafe_encode64(OpenSSL::PKCS5.pbkdf2_hmac("", "", 100000, digest.digest_length, digest)))
+    end
+    
+    it "should generate a consistent hash" do
+      digest = OpenSSL::Digest::SHA512.new(GoSecure.encryption_key)
+      expect(GoSecure.hmac('a', 'b', 1)).to eq(Base64.urlsafe_encode64(OpenSSL::PKCS5.pbkdf2_hmac("a", "b", 100000, digest.digest_length, digest)))
+      expect(GoSecure.hmac('b', 'c', 1)).to eq(Base64.urlsafe_encode64(OpenSSL::PKCS5.pbkdf2_hmac("b", "c", 100000, digest.digest_length, digest)))
+      expect(GoSecure.hmac('a', 'b', 1)).to eq(Base64.urlsafe_encode64(OpenSSL::PKCS5.pbkdf2_hmac("a", "b", 100000, digest.digest_length, digest)))
+    end
+    
+    it "should allow using a custom encryption key" do
+      digest = OpenSSL::Digest::SHA512.new('cde')
+      expect(GoSecure.hmac('a', 'b', 1, 'cde')).to eq(Base64.urlsafe_encode64(OpenSSL::PKCS5.pbkdf2_hmac("a", "b", 100000, digest.digest_length, digest)))
+    end
+  end  
+
+  def self.hmac(str, salt, level, encryption_key=nil)
+    # level is here so we can upgrade in the future without breaking backwards compatibility
+    raise "invalid level" unless level == 1
+    digest = OpenSSL::Digest::SHA512.new(encryption_key || self.encryption_key)
+    res = Base64.urlsafe_encode64(OpenSSL::PKCS5.pbkdf2_hmac(str.to_s, salt, 100000, digest.digest_length, digest))
   end
   
   describe "nonce" do
@@ -80,11 +107,11 @@ describe GoSecure do
     
     it "should generate a hashed password response" do
       res = GoSecure.generate_password("abcdefg")
-      expect(res['hash_type']).to eq('pbkdf2-sha256')
+      expect(res['hash_type']).to eq('pbkdf2-sha256-2')
       expect(res['salt'].length).to be > 10
       
-      digest = OpenSSL::Digest::SHA256.new
-      expect(res['hashed_password']).to eq(Base64.encode64(OpenSSL::PKCS5.pbkdf2_hmac("abcdefg", res['salt'], 100000, digest.digest_length, digest)))
+      digest = OpenSSL::Digest::SHA512.new(GoSecure.encryption_key)
+      expect(res['hashed_password']).to eq(Base64.urlsafe_encode64(OpenSSL::PKCS5.pbkdf2_hmac("abcdefg", res['salt'], 100000, digest.digest_length, digest)))
     end
   end
 
