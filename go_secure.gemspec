@@ -1,10 +1,11 @@
 Gem::Specification.new do |s|
   s.name        = 'go_secure'
 
+  s.add_dependency 'oj'
   s.add_development_dependency 'rspec'
   s.add_development_dependency 'ruby-debug'
 
-  s.version     = '0.4'
+  s.version     = '0.6'
   s.date        = '2018-05-14'
   s.summary     = "Go Secure"
   s.extra_rdoc_files = %W(LICENSE)
