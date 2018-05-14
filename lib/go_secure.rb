@@ -143,7 +143,7 @@ module GoSecure
     end
   
     def self.dump(obj)
-      json = JSON.dump(obj, mode: :compat)
+      json = JSON.dump(obj)
       res = encrypted_dump(json)
       res
     end
