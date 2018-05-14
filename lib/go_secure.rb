@@ -1,5 +1,6 @@
 require 'openssl'
 require 'base64'
+require 'oj'
 
 module GoSecure
   def self.sha512(str, salt, encryption_key=nil)
@@ -134,15 +135,15 @@ module GoSecure
     def self.load(str)
       return nil unless str
       if str.match(/^\*\*/)
-        JSON.load(str[2..-1])
+        Oj.load(str[2..-1])
       else
         salt, secret = str.split(/--/, 2)
-        JSON.load(GoSecure.decrypt(secret, salt, "secure_json"))
+        Oj.load(GoSecure.decrypt(secret, salt, "secure_json"))
       end
     end
   
     def self.dump(obj)
-      json = JSON.dump(obj)
+      json = Oj.dump(obj, mode: :compat)
       res = encrypted_dump(json)
       res
     end
