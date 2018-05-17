@@ -135,10 +135,10 @@ module GoSecure
     def self.load(str)
       return nil unless str
       if str.match(/^\*\*/)
-        Oj.load(str[2..-1])
+        Oj.load(str[2..-1], mode: :compat)
       else
         salt, secret = str.split(/--/, 2)
-        Oj.load(GoSecure.decrypt(secret, salt, "secure_json"))
+        Oj.load(GoSecure.decrypt(secret, salt, "secure_json"), mode: :compat)
       end
     end
   
