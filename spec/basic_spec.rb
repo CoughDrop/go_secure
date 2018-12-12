@@ -166,7 +166,7 @@ describe GoSecure do
       end
     
       it "should error on malformed string" do
-        expect{GoSecure::SecureJson.load("bob")}.to raise_error(OpenSSL::Cipher::CipherError)
+        expect{GoSecure::SecureJson.load("bob")}.to raise_error(ArgumentError)
       end
     
       it "should properly decode stored values" do

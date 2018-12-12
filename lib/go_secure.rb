@@ -20,9 +20,10 @@ module GoSecure
   
   def self.encrypt(str, ref, encryption_key=nil)
     require 'base64'
-    c = OpenSSL::Cipher::Cipher.new('aes-256-cbc')
+    c = OpenSSL::Cipher.new('aes-256-cbc')
     c.encrypt
-    c.key = Digest::SHA2.hexdigest(ref + "_" + (encryption_key || self.encryption_key))
+    sha = Digest::SHA2.hexdigest(ref + "_" + (encryption_key || self.encryption_key))
+    c.key = sha[0..31]
     c.iv = iv = c.random_iv
     e = c.update(str)
     e << c.final
@@ -32,10 +33,13 @@ module GoSecure
   
   def self.decrypt(str, salt, ref, encryption_key=nil)
     require 'base64'
-    c = OpenSSL::Cipher::Cipher.new('aes-256-cbc')
+    c = OpenSSL::Cipher.new('aes-256-cbc')
     c.decrypt
-    c.key = Digest::SHA2.hexdigest(ref + "_" + (encryption_key || self.encryption_key))
-    c.iv = Base64.decode64(salt)
+    sha = Digest::SHA2.hexdigest(ref + "_" + (encryption_key || self.encryption_key))
+    c.key = sha[0..31]
+    iv = Base64.decode64(salt)
+
+    c.iv = iv[0..15]
     d = c.update(Base64.decode64(str))
     d << c.final
     d.to_s
@@ -47,7 +51,7 @@ module GoSecure
 #     pw['hash_type'] = 'sha512'
 #     pw['hash_type'] = 'bcrypt'
     pw['hash_type'] = 'pbkdf2-sha256-2'
-    pw['salt'] = Digest::MD5.hexdigest(OpenSSL::Random.pseudo_bytes(4) + Time.now.to_i.to_s + self.encryption_key + "pw" + OpenSSL::Random.pseudo_bytes(16))
+    pw['salt'] = Digest::MD5.hexdigest(OpenSSL::Random.random_bytes(4) + Time.now.to_i.to_s + self.encryption_key + "pw" + OpenSSL::Random.random_bytes(16))
 #     pw['hashed_password'] = Digest::SHA512.hexdigest(self.encryption_key + pw['salt'] + password.to_s)
 #     salted = Digest::SHA256.hexdigest(self.encryption_key + pw['salt'] + password.to_s)
 #     pw['hashed_password'] = BCrypt::Password.create(salted)
