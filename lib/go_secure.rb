@@ -13,6 +13,11 @@ module GoSecure
     digest = OpenSSL::Digest::SHA512.new(encryption_key || self.encryption_key)
     res = Base64.urlsafe_encode64(OpenSSL::PKCS5.pbkdf2_hmac(str.to_s, salt.to_s, 100000, digest.digest_length, digest))
   end
+
+  def self.lite_hmac(str, salt, level, encryption_key=nil)
+    raise "invalid level" unless level == 1
+    OpenSSL::HMAC.hexdigest('SHA512', OpenSSL::HMAC.hexdigest('SHA512', str.to_s, salt.to_s), encryption_key || self.encryption_key)
+  end
   
   def self.nonce(str)
     Digest::SHA512.hexdigest(str.to_s + Time.now.to_i.to_s + rand(999999).to_s + self.encryption_key)[0, 24]
@@ -113,7 +118,8 @@ module GoSecure
   
   def self.browser_token
     # TODO: checks around whether it's actually a web browser??
-    stamp = Time.now.strftime('%Y%j')
+    day = Time.now.strftime('%j')
+    stamp = "#{Time.now.year}#{(Time.now.yday / 366.0 * 100.0).to_i.to_s.rjust(2, '0')}"
     stamp += '-' + GoSecure.sha512(stamp, 'browser_token')
   end
   
@@ -125,7 +131,8 @@ module GoSecure
   def self.valid_browser_token?(token)
     return false if !token || token.length == 0 || !token.match(/-/)
     stamp, hash = token.split(/-/, 2)
-    if Time.now.strftime('%Y%j').to_i - stamp.to_i < 14 # 14 days?!
+    current_stamp = "#{Time.now.year}#{(Time.now.yday / 366.0 * 100.0).to_i.to_s.rjust(2, '0')}"
+    if current_stamp.to_i - stamp.to_i < (14/365.0*100.0) # 14 days?!
       return valid_browser_token_signature?(token)
     end
     false
