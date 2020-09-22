@@ -92,6 +92,12 @@ describe GoSecure do
     it "should allow using a custom encryption key" do
       expect(GoSecure.encrypt("I am happy", "something I said one time", "abcdefg").length).to eq(2)
     end
+
+    it "should allow using a custom initializatino vector" do
+      enc, salt = GoSecure.encrypt("I am happy", "something I said one time", "abcdefg", "abcdefghijklmnop")
+      expect(enc).to eq("DicRp9gkosmA4bZnMx0qlg==\n")
+      expect(salt).to eq(Base64.encode64("abcdefghijklmnop"))
+    end
   end
 
   describe "decrypt" do

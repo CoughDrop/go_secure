@@ -5,8 +5,8 @@ Gem::Specification.new do |s|
   s.add_development_dependency 'rspec'
   s.add_development_dependency 'ruby-debug'
 
-  s.version     = '0.67'
-  s.date        = '2018-12-10'
+  s.version     = '0.70'
+  s.date        = '2020-09-22'
   s.summary     = "Go Secure"
   s.extra_rdoc_files = %W(LICENSE)
   s.homepage = %q{http://github.com/CoughDrop/go_secure}

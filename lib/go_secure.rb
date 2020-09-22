@@ -23,13 +23,15 @@ module GoSecure
     Digest::SHA512.hexdigest(str.to_s + Time.now.to_i.to_s + rand(999999).to_s + self.encryption_key)[0, 24]
   end
   
-  def self.encrypt(str, ref, encryption_key=nil)
+  def self.encrypt(str, ref, encryption_key=nil, iv=nil)
     require 'base64'
     c = OpenSSL::Cipher.new('aes-256-cbc')
     c.encrypt
     sha = Digest::SHA2.hexdigest(ref + "_" + (encryption_key || self.encryption_key))
     c.key = sha[0..31]
-    c.iv = iv = c.random_iv
+    raise "invalid iv" if iv && iv.length != 16
+    iv = iv || c.random_iv
+    c.iv = iv
     e = c.update(str)
     e << c.final
     res = [Base64.encode64(e), Base64.encode64(iv)]
